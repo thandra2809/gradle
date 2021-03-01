@@ -16,7 +16,7 @@
 
 package org.gradle.integtests.composite.plugins
 
-
+import groovy.transform.NotYetImplemented
 import org.gradle.integtests.fixtures.ToBeFixedForConfigurationCache
 
 class PluginBuildsIntegrationTest extends AbstractPluginBuildIntegrationTest {
@@ -130,7 +130,7 @@ class PluginBuildsIntegrationTest extends AbstractPluginBuildIntegrationTest {
         pluginBuild.assertSettingsPluginApplied()
     }
 
-    def "settings plugin from included build is used over published plugin when version specified is found in repository"() {
+    def "published settings plugin is used over included build plugin when version is specified"() {
         given:
         def repoDeclaration = """
             repositories {
@@ -155,7 +155,8 @@ class PluginBuildsIntegrationTest extends AbstractPluginBuildIntegrationTest {
 
         then:
         succeeds()
-        pluginBuild.assertSettingsPluginApplied()
+        outputContains("${pluginBuild.settingsPluginId} from repository applied")
+        pluginBuild.assertSettingsPluginNotApplied()
     }
 
     def "settings plugin from included build is used over published plugin when version specified is not found in repository"() {
@@ -216,7 +217,7 @@ class PluginBuildsIntegrationTest extends AbstractPluginBuildIntegrationTest {
         pluginBuild.assertProjectPluginApplied()
     }
 
-    def "project plugin from included build is used over published plugin when version specified is found in repository"() {
+    def "published project plugin is used over included build plugin when version is specified"() {
         given:
         def repoDeclaration = """
             repositories {
@@ -243,7 +244,8 @@ class PluginBuildsIntegrationTest extends AbstractPluginBuildIntegrationTest {
 
         then:
         succeeds()
-        pluginBuild.assertProjectPluginApplied()
+        outputContains("${pluginBuild.projectPluginId} from repository applied")
+        pluginBuild.assertProjectPluginNotApplied()
     }
 
     def "project plugin from included build is used over published plugin when version specified is not found in repository"() {
@@ -291,6 +293,28 @@ class PluginBuildsIntegrationTest extends AbstractPluginBuildIntegrationTest {
 
         then:
         failureDescriptionContains("Plugin [id: '${pluginBuild.settingsPluginId}'] was not found in any of the following sources:")
+    }
+
+    // Emit the deprecation warning in CompositeBuildPluginResolverContributor once we settle on and publicize the new API for plugin builds
+    @NotYetImplemented
+    def "regular included builds contributing project plugins is deprecated"() {
+        given:
+        def pluginBuild = pluginBuild("build-logic")
+        settingsFile << """
+            includeBuild("${pluginBuild.buildName}")
+        """
+        buildFile << """
+            plugins {
+                id("${pluginBuild.projectPluginId}")
+            }
+        """
+
+        when:
+        executer.expectDocumentedDeprecationWarning("Including builds that contribute Gradle plugins outside of pluginManagement {} block in settings file has been deprecated. This is scheduled to be removed in Gradle 8.0. Consult the upgrading guide for further information: https://docs.gradle.org/current/userguide/upgrading_version_6.html#included_builds_contributing_plugins")
+        succeeds()
+
+        then:
+        pluginBuild.assertProjectPluginApplied()
     }
 
     def "included plugin build is not visible as library component"() {
