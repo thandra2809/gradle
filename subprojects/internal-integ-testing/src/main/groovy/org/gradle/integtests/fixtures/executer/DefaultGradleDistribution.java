@@ -120,7 +120,12 @@ public class DefaultGradleDistribution implements GradleDistribution {
             return javaVersion.compareTo(JavaVersion.VERSION_1_8) >= 0 && javaVersion.compareTo(JavaVersion.VERSION_14) <= 0;
         }
 
-        return javaVersion.compareTo(JavaVersion.VERSION_1_8) >= 0 && maybeEnforceHighestVersion(javaVersion, JavaVersion.VERSION_15);
+        // 7.0 added official support for JDK16
+        if (isOlder("7.0")) { // not using isSameOrOlder because we might have more 6.8.x releases after 7.0
+            return javaVersion.compareTo(JavaVersion.VERSION_1_8) >= 0 && javaVersion.compareTo(JavaVersion.VERSION_15) <= 0;
+        }
+
+        return javaVersion.compareTo(JavaVersion.VERSION_1_8) >= 0 && maybeEnforceHighestVersion(javaVersion, JavaVersion.VERSION_16);
     }
 
     @Override
@@ -282,6 +287,10 @@ public class DefaultGradleDistribution implements GradleDistribution {
             return stderr;
         }
         return stdout;
+    }
+
+    protected boolean isOlder(String otherVersion) {
+        return version.compareTo(GradleVersion.version(otherVersion)) < 0;
     }
 
     protected boolean isSameOrNewer(String otherVersion) {
