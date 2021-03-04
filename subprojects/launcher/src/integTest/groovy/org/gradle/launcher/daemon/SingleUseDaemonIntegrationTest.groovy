@@ -24,9 +24,7 @@ import org.gradle.launcher.daemon.client.DaemonStartupMessage
 import org.gradle.launcher.daemon.client.SingleUseDaemonClient
 import spock.lang.IgnoreIf
 
-import java.nio.charset.Charset
-
-@IgnoreIf({ GradleContextualExecuter.isDaemon() })
+@IgnoreIf({ GradleContextualExecuter.isEmbedded() })
 class SingleUseDaemonIntegrationTest extends AbstractIntegrationSpec {
 
     def setup() {
@@ -115,6 +113,7 @@ class SingleUseDaemonIntegrationTest extends AbstractIntegrationSpec {
 
         then:
         wasForked()
+        daemons.daemon.stops()
     }
 
     def "forks build to run when immutable jvm args set regardless of the environment"() {
@@ -149,25 +148,7 @@ class SingleUseDaemonIntegrationTest extends AbstractIntegrationSpec {
 
         and:
         wasForked()
-    }
-
-    def "does not fork build when immutable system property is set on command line with same value as current JVM"() {
-        def encoding = Charset.defaultCharset().name()
-
-        given:
-        buildScript """
-            task encoding {
-                doFirst { println "encoding = " + java.nio.charset.Charset.defaultCharset().name() }
-            }
-        """
-        when:
-        run "encoding", "-Dfile.encoding=$encoding"
-
-        then:
-        outputContains "encoding = $encoding"
-
-        and:
-        wasNotForked()
+        daemons.daemon.stops()
     }
 
     def "does not print daemon startup message for a single use daemon"() {

@@ -44,15 +44,13 @@ class ForkingGradleHandle extends OutputScrapingGradleHandle {
     private final OutputCapturer errorOutputCapturer;
     private final Action<ExecutionResult> resultAssertion;
     private final PipedOutputStream stdinPipe;
-    private final boolean isDaemon;
 
     private final DurationMeasurement durationMeasurement;
     private final AtomicReference<ExecHandle> execHandleRef = new AtomicReference<>();
 
-    public ForkingGradleHandle(PipedOutputStream stdinPipe, boolean isDaemon, Action<ExecutionResult> resultAssertion, String outputEncoding, Factory<? extends AbstractExecHandleBuilder> execHandleFactory, DurationMeasurement durationMeasurement) {
+    public ForkingGradleHandle(PipedOutputStream stdinPipe, Action<ExecutionResult> resultAssertion, String outputEncoding, Factory<? extends AbstractExecHandleBuilder> execHandleFactory, DurationMeasurement durationMeasurement) {
         this.resultAssertion = resultAssertion;
         this.execHandleFactory = execHandleFactory;
-        this.isDaemon = isDaemon;
         this.stdinPipe = stdinPipe;
         this.durationMeasurement = durationMeasurement;
         this.standardOutputCapturer = outputCapturerFor(System.out, outputEncoding, durationMeasurement);
@@ -148,11 +146,7 @@ class ForkingGradleHandle extends OutputScrapingGradleHandle {
 
         try {
             stdinPipe.write(4);
-            if (isDaemon) {
-                // When running a test in a daemon executer, the input is buffered until a
-                // newline char is received
-                stdinPipe.write(getPlatformLineSeparator().getBytes());
-            }
+            stdinPipe.write(getPlatformLineSeparator().getBytes());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
