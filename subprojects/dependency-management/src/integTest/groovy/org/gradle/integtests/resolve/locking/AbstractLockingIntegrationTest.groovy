@@ -179,6 +179,44 @@ dependencies {
     }
 
     @ToBeFixedForConfigurationCache
+    def 'does not write lock file when build fails'() {
+        mavenRepo.module('org', 'bar', '1.1').publish()
+
+        buildFile << """
+dependencyLocking {
+    lockAllConfigurations()
+}
+
+repositories {
+    maven {
+        url '${mavenRepo.uri}'
+    }
+}
+configurations {
+    conf
+}
+
+dependencies {
+    conf 'org:bar:1.+'
+}
+
+task copyDeps(type: Copy) {
+    from configurations.conf
+    into "\$buildDir/output"
+    doLast {
+        throw new RuntimeException("Build failed")
+    }
+}
+"""
+
+        when:
+        fails 'copyDeps', '--write-locks'
+
+        then:
+        lockfileFixture.expectLockStateMissing('conf')
+    }
+
+    @ToBeFixedForConfigurationCache
     @Unroll
     def "writes dependency lock file for resolved version #version"() {
         mavenRepo.module('org', 'bar', '1.0').publish()
